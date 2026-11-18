@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* Neutral development scaffold. Final typography and branding are deferred. */
+@layer base {
+  body { margin: 0; font-family: system-ui, sans-serif; color: #222; background: #fff; }
+  h1 { font-size: 1.5rem; font-weight: 600; }
+}
+
