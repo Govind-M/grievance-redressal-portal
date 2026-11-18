@@ -1,5 +1,11 @@
 # CM Kerala Public Grievance Redressal Portal
 
+Supabase is now available as an explicit second PostgreSQL target; local remains the default.
+The hosted schema is at 0006 with pgvector 0.8.2 in extensions and seven reference departments.
+Local development remains unchanged at 0004. See [Supabase configuration, security and verified
+results](DOCUMENTATION/11_Supabase_PostgreSQL.md). Client TLS is verified; the separate
+pooler-to-database TLS observation and dashboard hardening tasks are documented there.
+
 This is a recruitment demonstration prototype, not an official Government of Kerala service.
 
 Phases 1–4 foundation, authentication and complete backend grievance lifecycle for the WhiteMatrix Software Solutions
@@ -21,7 +27,8 @@ resolution/reopening, audited escalation and database-driven dashboard analytics
 Core schema has fourteen domain tables through migration 0005; optional 0006 adds the fifteenth
 table for vectors. Migrations 0001–0004 remain unchanged.
 Phase 5 adds opt-in advisory classification, duplicate assessment and report analysis with mocked tests.
-Live Gemini remains unverified; local vector SQL is blocked by the missing server extension.
+Live Gemini remains unverified. Local vector SQL lacks the extension; hosted vector SQL was verified
+separately with synthetic data and no Gemini calls.
 File uploads, citizen feedback APIs and frontend authentication/final UI remain deferred.
 See [AI integration and quota policy](DOCUMENTATION/05_AI_Integration.md).
 See the [Phase 4 API and end-to-end walkthrough](DOCUMENTATION/10_Administrative_Workflow.md).

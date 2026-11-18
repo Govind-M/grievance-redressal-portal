@@ -1,5 +1,26 @@
 # Development handoff — Phase 5
 
+## Latest: Supabase integration
+
+Supabase is an explicit second PostgreSQL environment selected with DATABASE_TARGET=supabase;
+local remains the default and its URL/data/revision 0004 are unchanged. Hosted migrations reached
+0006, all 15 application tables exist, vector 0.8.2 remains in extensions, and seven canonical
+departments were seeded without accounts. No Gemini request/backfill ran.
+See [configuration, commands, security and results](11_Supabase_PostgreSQL.md).
+
+Shared engine construction is app/db/engine.py. Dedicated guarded tooling is scripts/supabase_db.py
+(inspect/provision/verify/rollback-probe). 0006 was corrected before its first known application
+deployment to resolve the existing extension namespace; 0001–0005 remain unchanged.
+Hosted schema drift/read-only vector queries and explicitly rolled-back AI/vector persistence
+checks passed. Local pytest: 381 passed, 3 local vector skips, 17 upstream warnings.
+Ruff/compilation/dependency checks passed.
+
+Strict client CA/hostname verification is enabled; pg_stat_ssl reports the separate managed
+backend hop without TLS. Operator review of that hop, Data API dashboard settings, network
+restrictions and a least-privilege runtime role remains. Backend currently connects as the owner;
+FastAPI RBAC remains mandatory. The earlier Phase 5 local-only blocker narrative below is
+historical, not the latest hosted capability state.
+
 Recruitment prototype, not an official Government of Kerala service.
 Repository: C:\Govind\grievance-redressal-portal. Branch observed: main.
 Read AGENTS.md before changes; preserve preexisting uncommitted instructions and all user edits.

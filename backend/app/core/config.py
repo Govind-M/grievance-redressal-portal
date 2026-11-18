@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     database_url: SecretStr = SecretStr(
         "postgresql+psycopg://cm_user:change_me@localhost:5432/cm_kerala"
     )
+    database_target: Literal["local", "supabase"] = "local"
+    supabase_database_url: SecretStr | None = None
+    supabase_sslrootcert: Path | None = None
+    db_pool_size: int = Field(default=3, ge=1, le=20)
+    db_max_overflow: int = Field(default=2, ge=0, le=20)
+    db_pool_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    db_pool_recycle_seconds: int = Field(default=300, ge=30, le=3600)
+    db_connect_timeout_seconds: int = Field(default=5, ge=1, le=30)
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     jwt_secret_key: SecretStr | None = None
     jwt_algorithm: Literal["HS256"] = "HS256"
@@ -122,6 +130,47 @@ class Settings(BaseSettings):
     @property
     def allowed_origins(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @property
+    def selected_database_url(self):
+        """Return a URL object, never a password-masked string passed back to SQLAlchemy."""
+        if self.database_target == "local":
+            return make_url(self.database_url.get_secret_value())
+        if not self.supabase_database_url or not self.supabase_database_url.get_secret_value():
+            raise ValueError("SUPABASE_DATABASE_URL is required for the explicit supabase target")
+        try:
+            url = make_url(self.supabase_database_url.get_secret_value())
+            valid = (
+                url.drivername in ("postgresql", "postgresql+psycopg")
+                and url.host
+                and url.username
+                and url.password
+                and url.database
+                and (url.port or 5432) == 5432
+            )
+        except Exception:
+            raise ValueError("SUPABASE_DATABASE_URL is not a valid PostgreSQL URL") from None
+        if not valid:
+            raise ValueError(
+                "Supabase requires PostgreSQL credentials and a port-5432 direct/session connection"
+            )
+        if set(url.query) & {
+            "host",
+            "hostaddr",
+            "port",
+            "dbname",
+            "user",
+            "password",
+            "service",
+            "servicefile",
+            "options",
+        }:
+            raise ValueError(
+                "Supabase URL query must not override connection identity or session options"
+            )
+        if url.query.get("sslmode", "verify-full") != "verify-full":
+            raise ValueError("Supabase TLS requires sslmode=verify-full; weaker modes are rejected")
+        return url.set(drivername="postgresql+psycopg")
 
 
 @lru_cache

@@ -1,5 +1,27 @@
 # Setup and testing
 
+## Supabase integration verification — 18 November 2026
+
+Full local-only pytest: **381 passed, 3 skipped, 17 upstream warnings**, 150.05s. The 24 new
+database-target/TLS/security/reference-seed tests passed. Tests used the dedicated local
+phase1_test database only; fixtures reject remote hosts before any connection or mutation.
+Ruff, compilation and pip check passed. Local PostgreSQL development stayed at 0004 with
+unchanged row/count fingerprint and unchanged DATABASE_URL.
+
+On the positively identified new Supabase project: authentication and verify-full client TLS
+passed; migrations 0001–0006 applied; 15 application tables, constraints/indexes/five enums and four
+triggers verified; Alembic drift check passed. Existing vector 0.8.2 in extensions was reused.
+Synthetic 768-dimensional cosine SQL and ORM repository queries passed. Synthetic AI
+JSONB/report-provenance/vector inserts were rolled back and no sample users/grievances persisted.
+Only seven canonical departments were seeded. Non-mutating FastAPI health/DB/departments returned
+200 with seven departments. No full pytest ran on Supabase, and no Gemini requests were made.
+
+The backend pg_stat_ssl observation was ssl=false on the provider-managed pooler/database hop;
+do not confuse that with the separately verified TLS client connection. RLS/effective API-role
+grants were hardened for application objects only. Dashboard Data API/network/transport review
+remains an operator task. Commands and complete results:
+[Supabase PostgreSQL](11_Supabase_PostgreSQL.md).
+
 ## Phase 5 verification — 18 November 2026
 
 Actual commands used the existing Windows Python 3.14 virtual environment and dedicated empty

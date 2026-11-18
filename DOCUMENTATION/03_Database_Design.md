@@ -1,5 +1,12 @@
 # Database design
 
+Supabase integration now provisions the same application schema through revision 0006. Vector
+0.8.2 remains in its existing extensions namespace; runtime/migration search paths resolve it
+without moving managed objects. Fifteen application tables and four audit/timestamp triggers were
+verified; Alembic reports no drift. All application tables plus version bookkeeping have RLS and
+deny independent Data API-role access. Local data/revision 0004 were preserved.
+See [hosted database details](11_Supabase_PostgreSQL.md).
+
 ## Phase 4/5 incremental additions
 
 0004 added immutable grievance_escalations, indexed grievance_updates.assignment_id provenance

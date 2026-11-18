@@ -1,5 +1,10 @@
 # Phase 5 — advisory AI integration
 
+Supabase update: real hosted pgvector 0.8.2 SQL, Vector(768), repository queries and rolled-back
+AI JSONB/report-provenance/vector inserts are now verified. The local server still lacks vector.
+No live Gemini calls or embedding backfills were made. See [Supabase results and safe environment
+selection](11_Supabase_PostgreSQL.md). Earlier local-only blocker notes below are historical.
+
 Recruitment prototype, not an official Government of Kerala service.
 Four backend AI endpoints are implemented with mocked provider verification. Live Gemini requests
 made during implementation: **0**. Real pgvector SQL is unverified on this host: PostgreSQL 18

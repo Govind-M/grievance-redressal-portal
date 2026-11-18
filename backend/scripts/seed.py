@@ -34,15 +34,8 @@ ACCOUNTS = (
 )
 
 
-def seed(session: Session, settings: Settings, *, reset_passwords: bool = False) -> None:
-    """Atomic, serialized and idempotent. Existing accounts/passwords are preserved."""
-    # Validate all secrets before mutating anything; caller owns the transaction.
-    if reset_passwords and settings.app_env != "development":
-        raise ValueError("Demo password reset is restricted to APP_ENV=development")
-    for _, _, _, key in ACCOUNTS:
-        secret = getattr(settings, key)
-        if not secret or not 12 <= len(secret.get_secret_value()) <= 128:
-            raise ValueError(f"{key.upper()} must contain 12 to 128 characters")
+def seed_departments(session: Session) -> dict[str, Department]:
+    """Reference-only seed: no accounts/passwords and no updates to pre-existing rows."""
     session.execute(text("SELECT pg_advisory_xact_lock(2026111701)"))
     departments = {}
     for name in DEPARTMENTS:
@@ -54,6 +47,21 @@ def seed(session: Session, settings: Settings, *, reset_passwords: bool = False)
             session.add(department)
             session.flush()
         departments[name] = department
+    return departments
+
+
+def seed(session: Session, settings: Settings, *, reset_passwords: bool = False) -> None:
+    """Atomic, serialized and idempotent. Existing accounts/passwords are preserved."""
+    if settings.database_target != "local":
+        raise ValueError("Hosted targets permit reference-only seeding, not demo accounts")
+    # Validate all secrets before mutating anything; caller owns the transaction.
+    if reset_passwords and settings.app_env != "development":
+        raise ValueError("Demo password reset is restricted to APP_ENV=development")
+    for _, _, _, key in ACCOUNTS:
+        secret = getattr(settings, key)
+        if not secret or not 12 <= len(secret.get_secret_value()) <= 128:
+            raise ValueError(f"{key.upper()} must contain 12 to 128 characters")
+    departments = seed_departments(session)
     for name, email, role, key in ACCOUNTS:
         user = session.scalar(select(User).where(User.email == email).with_for_update())
         if user is None:
@@ -101,9 +109,21 @@ def main() -> None:
         action="store_true",
         help="Development only: reset exactly the three demo passwords",
     )
+    parser.add_argument(
+        "--reference-only",
+        action="store_true",
+        help="Seed canonical departments only; never create accounts",
+    )
     args = parser.parse_args()
     with get_session_factory()() as session, session.begin():
-        seed(session, get_settings(), reset_passwords=args.reset_demo_passwords)
+        if args.reference_only:
+            if args.reset_demo_passwords:
+                raise ValueError("Reference-only seeding cannot reset passwords")
+            seed_departments(session)
+        else:
+            if get_settings().database_target != "local":
+                raise ValueError("Hosted databases permit only --reference-only seeding")
+            seed(session, get_settings(), reset_passwords=args.reset_demo_passwords)
     print("Fictional demonstration seed completed.")
 
 

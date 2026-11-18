@@ -46,6 +46,10 @@ def pg_engine():
     from sqlalchemy.engine import make_url
 
     parsed = make_url(url)
+    if parsed.host not in ("localhost", "127.0.0.1", "::1"):
+        pytest.fail(
+            "Destructive PostgreSQL fixtures require a dedicated local test database, never Supabase"
+        )
     if parsed.drivername != "postgresql+psycopg" or not (parsed.database or "").endswith("_test"):
         pytest.fail("TEST_DATABASE_URL must use psycopg and a dedicated database ending in _test")
     engine = create_engine(

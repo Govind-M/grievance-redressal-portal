@@ -23,7 +23,30 @@ def upgrade():
             "pgvector server extension is unavailable. Install pgvector for this PostgreSQL "
             "instance, then upgrade head. Mandatory AI analysis works at revision 0005."
         )
-    op.execute("CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public")
+    # Reuse any installed namespace (Supabase commonly uses extensions). Never relocate it.
+    # Runtime discovery also keeps offline SQL correct and preserves a caller's current schema.
+    op.execute("""
+        DO $vector_setup$
+        DECLARE vector_schema text; app_schema text := current_schema();
+        BEGIN
+            SELECT n.nspname INTO vector_schema
+            FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n
+                ON n.oid=e.extnamespace WHERE e.extname='vector';
+            IF vector_schema IS NULL THEN
+                IF EXISTS (SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname='extensions') THEN
+                    CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA extensions;
+                ELSE
+                    CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+                END IF;
+                SELECT n.nspname INTO vector_schema
+                FROM pg_catalog.pg_extension e JOIN pg_catalog.pg_namespace n
+                    ON n.oid=e.extnamespace WHERE e.extname='vector';
+            END IF;
+            PERFORM pg_catalog.set_config('search_path',
+                pg_catalog.quote_ident(app_schema) || ',' || pg_catalog.quote_ident(vector_schema), true);
+        END
+        $vector_setup$;
+    """)
     op.create_table(
         "grievance_embeddings",
         sa.Column("id", sa.UUID(), primary_key=True),

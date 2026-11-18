@@ -233,3 +233,30 @@ unavailable), 17 upstream LangSmith/Python 3.14 deprecation warnings. Ruff/compi
 passed. Core 0005 upgrade/downgrade/metadata comparison passed in an isolated test DB; missing
 vector migration failure was verified safe. Repository head 0006; development stayed at 0004.
 Live provider verification remains pending, with exactly 0 live Gemini requests made.
+
+## 13. Supabase PostgreSQL integration handoff
+
+Supabase is managed PostgreSQL only, not Supabase Auth/REST or a browser database client.
+DATABASE_TARGET defaults local; explicit supabase selects SUPABASE_DATABASE_URL. Keep the local
+DATABASE_URL intact. app/db/engine.py centralizes verified TLS, bounded pools and extension-aware
+search paths for application sessions/Alembic. Hosted TLS requires verify-full and a trusted CA;
+never disable verification to connect. Certificate paths/secrets stay in ignored configuration.
+
+scripts.supabase_db provides hosted-only inspect, fingerprint-confirmed provision, read-only verify
+and synthetic rollback-probe. Before initialization, actual identity/managed schemas/absence of
+application objects were verified. Hosted schema is now 0006, with 15 tables and vector 0.8.2
+reused in extensions. Migration 0006 was minimally corrected before its first known application
+deployment; 0001–0005 remain unchanged. Seven reference departments were seeded; no hosted accounts
+or grievances persist. RLS and denied Data API-role grants protect only application objects;
+Supabase managed schemas/roles/default grants were not changed.
+
+Local development stayed at 0004 with identical data/count fingerprint and unchanged URL.
+Full regression is LOCAL ONLY: 381 passed, 3 local-vector skips, 17 upstream warnings. Never point
+schema-mutating fixtures at Supabase application data; fixtures now reject non-loopback targets.
+Hosted real vector SQL/ORM and AI JSONB/report provenance were verified separately with synthetic
+vectors and explicitly rolled-back inserts. Client TLS was verified; the backend pg_stat_ssl
+reported ssl=false for the separate pooler/database hop. Provider-managed transport review, Data
+API dashboard disablement/network restrictions and a least-privilege runtime role remain.
+
+No live Gemini request or embedding backfill is authorized or was run (actual count 0). Preserve
+all AI quota guards. See DOCUMENTATION/11_Supabase_PostgreSQL.md and the latest development handoff.
