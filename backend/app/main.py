@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session
 from app.core.config import Settings, get_settings
 from app.core.logging import configure_logging
 from app.db.session import get_db, get_engine
+from app.modules.ai.router import router as ai_router
+from app.modules.ai.runtime import AIRuntime
 from app.modules.auth.cookies import clear_refresh_cookie
 from app.modules.auth.errors import AuthenticationError
 from app.modules.auth.router import router as auth_router
@@ -44,6 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(application: FastAPI):
         logger.info("Application started")
         yield
+        application.state.ai_runtime.provider.close()
         if get_engine.cache_info().currsize:
             get_engine().dispose()
         logger.info("Application stopped")
@@ -53,6 +56,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title=config.app_name, version=config.version, debug=False, lifespan=lifespan
     )
     application.state.settings = config
+    application.state.ai_runtime = AIRuntime(config)
+    application.include_router(ai_router, prefix=config.api_prefix)
     application.include_router(auth_router, prefix=config.api_prefix)
     application.include_router(users_router, prefix=config.api_prefix)
     application.include_router(grievances_router, prefix=config.api_prefix)
@@ -76,6 +81,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             or request.url.path.startswith(f"{config.api_prefix}/grievances")
             or request.url.path.startswith(f"{config.api_prefix}/cmo")
             or request.url.path.startswith(f"{config.api_prefix}/officer")
+            or request.url.path.startswith(f"{config.api_prefix}/ai")
         ):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Pragma"] = "no-cache"

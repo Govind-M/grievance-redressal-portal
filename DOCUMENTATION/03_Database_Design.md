@@ -1,5 +1,21 @@
 # Database design
 
+## Phase 4/5 incremental additions
+
+0004 added immutable grievance_escalations, indexed grievance_updates.assignment_id provenance
+and a unique pending-report partial index. Core schema: fourteen domain tables.
+0005 adds nullable indexed ai_analyses.report_id with a RESTRICT report FK, preserving old rows.
+Existing JSONB stores validated results, source fingerprints and prompt versions; no duplicate
+AI analysis table is introduced.
+
+Optional 0006 enables vector and adds grievance_embeddings: UUID, grievance RESTRICT FK,
+model_name, dimensions, Vector(768), SHA-256 source_fingerprint, created_at and updated_at.
+Unique grievance/model/dimensions permits model-compatible idempotent upserts; dimensions and
+fingerprint length have checks. No ANN index is needed. The capable schema has fifteen tables.
+Downgrade retains the potentially shared extension. When the server extension is absent, remain
+at core 0005; ordinary workflows and mandatory analysis remain available.
+See [AI setup and migration details](05_AI_Integration.md).
+
 PostgreSQL native UUID primary keys use Python uuid4 defaults. All timestamps are TIMESTAMPTZ.
 Application and Alembic sessions use UTC; PostgreSQL stores instants independently of display timezone.
 created_at defaults to now(); updated_at on users/grievances has ORM onupdate plus a DB trigger.

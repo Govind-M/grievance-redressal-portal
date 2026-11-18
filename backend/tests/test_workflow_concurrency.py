@@ -38,7 +38,9 @@ def test_concurrent_assignment_submission_and_review(pg_engine):
         config = Config(str(BACKEND_DIR / "alembic.ini"))
         with engine.begin() as connection:
             config.attributes["connection"] = connection
-            command.upgrade(config, "head")
+            # This isolated search_path intentionally excludes public (and its vector type).
+            # Phase 4 lock tests need only the mandatory core; vector SQL has separate tests.
+            command.upgrade(config, "0005")
         with Session(engine, expire_on_commit=False) as db:
             department = Department(
                 name="Synthetic concurrency department", description="Test only"

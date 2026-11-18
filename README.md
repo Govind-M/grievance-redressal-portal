@@ -18,8 +18,12 @@ hybrid assignment permission helpers. Phase 3 adds citizen grievance submission,
 secure details/tracking/history, aggregate statistics and public active-department APIs.
 Phase 4 adds CMO administration, hybrid assignments, officer investigations, report review,
 resolution/reopening, audited escalation and database-driven dashboard analytics.
-There are fourteen domain tables and migrations 0001–0004; earlier migrations are unchanged.
-AI, file uploads, citizen feedback APIs and frontend authentication/final UI remain deferred.
+Core schema has fourteen domain tables through migration 0005; optional 0006 adds the fifteenth
+table for vectors. Migrations 0001–0004 remain unchanged.
+Phase 5 adds opt-in advisory classification, duplicate assessment and report analysis with mocked tests.
+Live Gemini remains unverified; local vector SQL is blocked by the missing server extension.
+File uploads, citizen feedback APIs and frontend authentication/final UI remain deferred.
+See [AI integration and quota policy](DOCUMENTATION/05_AI_Integration.md).
 See the [Phase 4 API and end-to-end walkthrough](DOCUMENTATION/10_Administrative_Workflow.md).
 
 ## Stack and repository
@@ -33,7 +37,7 @@ See the [Phase 4 API and end-to-end walkthrough](DOCUMENTATION/10_Administrative
 ```text
 frontend/src/   app routing/providers, layouts, shared placeholders, services, tests
 backend/app/   core settings/logging/security, db sessions/base/registry, domain modules
-backend/alembic/versions/   0001 foundation, 0002 authentication, 0003 privacy, 0004 workflow
+backend/alembic/versions/   0001–0004 foundation/workflow, 0005 AI provenance, optional 0006 vectors
 backend/scripts/seed.py    transactional idempotent fictional seed
 backend/tests/            unit and PostgreSQL integration checks
 DOCUMENTATION/            project, architecture, schema, API, AI, setup, user guide
@@ -72,7 +76,8 @@ Set-Location backend
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 # Edit backend/.env: DATABASE_URL, a strong persistent JWT_SECRET_KEY, and three
 # SEED_*_PASSWORD values (12 to 128 characters). See .env.example for key generation.
-.venv\Scripts\python.exe -m alembic upgrade head
+.venv\Scripts\python.exe -m alembic upgrade 0005
+# With server pgvector installed, upgrade head for optional semantic retrieval.
 .venv\Scripts\python.exe -m alembic current
 .venv\Scripts\python.exe -m scripts.seed
 .venv\Scripts\python.exe -m scripts.seed
@@ -125,7 +130,8 @@ APP_DEBUG controls application log verbosity; error responses always hide intern
 APP_DEBUG avoids collision with a host-level DEBUG variable. A persistent JWT_SECRET_KEY of at least
 32 bytes is required for login/protected APIs; development health checks still work without it.
 Production rejects missing/weak keys, insecure cookies and non-HTTPS browser origins. Gemini
-configuration remains optional/unused. Frontend VITE_API_BASE_URL defaults to http://localhost:8000/api/v1.
+configuration remains optional. AI_ENABLED and AI_LIVE_REQUESTS_ENABLED default false; real
+requests require explicit approval. Frontend VITE_API_BASE_URL defaults to http://localhost:8000/api/v1.
 
 Authentication endpoints: POST /auth/register, /auth/login, /auth/refresh, /auth/logout,
 /auth/logout-all; GET /auth/me; PATCH /users/me (all under /api/v1).
@@ -151,6 +157,7 @@ Set-Location backend
 .venv\Scripts\python.exe -m compileall -q app scripts tests
 .venv\Scripts\python.exe -m pytest -q
 .venv\Scripts\python.exe -m ruff check app scripts tests alembic
+# Run the head-schema check only after server pgvector is installed and 0006 is applied.
 .venv\Scripts\python.exe -m alembic check
 Set-Location ../frontend
 npm test
@@ -210,4 +217,12 @@ The current workstation has an ignored backend/.env configured for the isolated 
 persistent generated signing key. The updated API is running on http://127.0.0.1:8000.
 Demo password variables remain empty until you choose them; ordinary registration/login is ready.
 Use the documented explicit demo reset if you need to recover the unknown Phase 1 demo passwords.
+
+## Phase 5 implementation
+
+Four advisory AI POST endpoints support citizen drafts, CMO reanalysis, duplicate assessment and
+report analysis. Results append to ai_analyses; drafts are not persisted and official decisions
+are unchanged. Core migration 0005 adds report provenance; optional 0006 adds Vector(768) storage.
+See [AI integration](DOCUMENTATION/05_AI_Integration.md) for model choices, quota safeguards and
+the opt-in live script. No live requests, embedding backfills or development migrations were run.
 

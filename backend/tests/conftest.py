@@ -12,6 +12,32 @@ from app.core.config import BACKEND_DIR
 from app.db.base import Base
 
 
+@pytest.fixture(autouse=True)
+def no_external_ai_network(monkeypatch):
+    """Defense in depth: no test may send a provider, embedding or tracing request."""
+    import ipaddress
+    import socket
+
+    original = socket.socket.connect
+
+    def connect(sock, address):
+        if isinstance(address, tuple):
+            host = address[0]
+            if host != "localhost":
+                try:
+                    if not ipaddress.ip_address(host).is_loopback:
+                        raise AssertionError("External network access is forbidden during pytest")
+                except ValueError:
+                    raise AssertionError(
+                        "External network access is forbidden during pytest"
+                    ) from None
+        return original(sock, address)
+
+    monkeypatch.setattr(socket.socket, "connect", connect)
+    monkeypatch.setenv("LANGSMITH_TRACING", "false")
+    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
+
+
 @pytest.fixture(scope="session")
 def pg_engine():
     url = os.environ.get("TEST_DATABASE_URL")
@@ -30,6 +56,11 @@ def pg_engine():
     with engine.connect() as connection:
         if inspect(connection).get_table_names():
             pytest.fail("Tests require an empty test database; existing data will not be removed")
+        vector_available = connection.scalar(
+            text("SELECT EXISTS (SELECT 1 FROM pg_available_extensions WHERE name = 'vector')")
+        )
+    target_head = "head" if vector_available else "0005"
+    engine._phase5_target = target_head
     config = Config(str(BACKEND_DIR / "alembic.ini"))
     try:
         with engine.begin() as connection:
@@ -71,7 +102,7 @@ def pg_engine():
                 if target in ("0001", "0002"):
                     command.downgrade(config, target)
                 else:
-                    command.upgrade(config, target)
+                    command.upgrade(config, target_head)
                 for table, identifier in (
                     ("users", user_id),
                     ("departments", department_id),
@@ -99,14 +130,32 @@ def pg_engine():
                         )
                         == "INTERNAL"
                     )
-            assert set(inspect(connection).get_table_names()) == set(Base.metadata.tables) | {
+            expected = set(Base.metadata.tables)
+            if not vector_available:
+                expected.remove("grievance_embeddings")
+            assert set(inspect(connection).get_table_names()) == expected | {
                 "alembic_version",
             }
             command.downgrade(config, "base")
             assert inspect(connection).get_table_names() == ["alembic_version"]
             assert inspect(connection).get_enums() == []
-            command.upgrade(config, "head")
-            command.check(config)
+            command.upgrade(config, target_head)
+            if vector_available:
+                command.check(config)
+            else:
+                from alembic.autogenerate import compare_metadata
+                from alembic.migration import MigrationContext
+
+                context = MigrationContext.configure(
+                    connection,
+                    opts={
+                        "compare_type": True,
+                        "include_object": lambda obj, name, kind, reflected, compare_to: (
+                            name != "grievance_embeddings" if kind == "table" else True
+                        ),
+                    },
+                )
+                assert compare_metadata(context, Base.metadata) == []
         yield engine
     finally:
         with engine.begin() as connection:

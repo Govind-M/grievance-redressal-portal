@@ -16,6 +16,9 @@ class AIAnalysis(UUIDPrimaryKey, CreatedAt, Base):
         ForeignKey("grievances.id", ondelete="RESTRICT"), index=True
     )
     requested_by: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    report_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("action_taken_reports.id", ondelete="RESTRICT"), index=True
+    )
     model_name: Mapped[str] = mapped_column(String(150))
     analysis_type: Mapped[str] = mapped_column(String(100))
     suggested_department_id: Mapped[UUID | None] = mapped_column(

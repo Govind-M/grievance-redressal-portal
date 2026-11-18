@@ -14,6 +14,7 @@ from app.modules.enums import GrievanceStatus, Priority, ReviewStatus, UpdateVis
 from app.modules.grievances.references import generate_reference_number
 
 EXPECTED_TABLES = {
+    "grievance_embeddings",
     "grievance_escalations",
     "user_sessions",
     "revoked_tokens",

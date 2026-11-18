@@ -41,6 +41,24 @@ class Settings(BaseSettings):
     auth_cookie_domain: str | None = None
     auth_trusted_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     gemini_api_key: SecretStr | None = None
+    ai_enabled: bool = False
+    # Enable only after the operator has explicitly approved real provider requests.
+    ai_live_requests_enabled: bool = False
+    gemini_chat_model: str = Field(
+        default="gemini-3.5-flash-lite", min_length=1, max_length=150, pattern=r"^[a-zA-Z0-9._/-]+$"
+    )
+    gemini_embedding_model: Literal["gemini-embedding-001", "gemini-embedding-2"] = (
+        "gemini-embedding-001"
+    )
+    ai_embedding_dimensions: Literal[768] = 768
+    ai_request_timeout_seconds: int = Field(default=30, ge=1, le=120)
+    ai_max_retries: int = Field(default=0, ge=0, le=2)
+    ai_max_output_tokens: int = Field(default=2048, ge=256, le=4096)
+    ai_max_input_characters: int = Field(default=50000, ge=1000, le=120000)
+    ai_duplicate_candidate_limit: int = Field(default=5, ge=1, le=10)
+    ai_duplicate_similarity_threshold: float = Field(default=0.75, ge=0, le=1, allow_inf_nan=False)
+    ai_requests_per_minute: int = Field(default=5, ge=1, le=30)
+    ai_cache_seconds: int = Field(default=60, ge=0, le=300)
     default_resolution_days: int = Field(default=14, ge=1, le=365)
     seed_citizen_password: SecretStr | None = None
     seed_cmo_password: SecretStr | None = None

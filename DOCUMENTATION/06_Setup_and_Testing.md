@@ -1,5 +1,45 @@
 # Setup and testing
 
+## Phase 5 verification — 18 November 2026
+
+Actual commands used the existing Windows Python 3.14 virtual environment and dedicated empty
+phase1_test PostgreSQL 18 database on localhost:55432. No development migrations, credential
+changes, live Gemini requests or embedding backfills were performed.
+
+| Executed check | Result |
+|---|---|
+| Existing Phase 1–4 pytest regression after AI foundation changes | 279 passed |
+| Five new AI test modules, all provider calls mocked | 78 passed, 3 skipped |
+| Full python -m pytest -q with TEST_DATABASE_URL | 357 passed, 3 skipped in 143.82s |
+| python -m ruff check --no-cache . | All checks passed |
+| python -m compileall -q app scripts tests alembic | exit 0 |
+| python -m pip check | No broken requirements |
+| Shared isolated migration upgrade/downgrade and core metadata comparison | passed through 0005 |
+| Missing-vector head upgrade test | actionable failure; 0005 schema/revision preserved |
+| python -m alembic heads | 0006 (repository head) |
+| python -m alembic current (read-only development check) | 0004; unchanged |
+| Git diff of migrations 0001–0004 against HEAD | unchanged |
+| python -m scripts.ai_live_smoke --help | help only, zero provider calls |
+| Live chat/embedding requests and historical backfill | NOT run; 0 live requests |
+
+The three skips are explicitly real-vector tests: vector roundtrip/idempotence/fingerprint,
+cosine retrieval/exclusion/model compatibility, and the duplicate endpoint using real vector SQL
+with mocked Gemini. They are not silent substitutes for semantic integration success.
+The local server has no vector entry in pg_available_extensions. Install a compatible server
+extension before testing/applying 0006; the Python pgvector package alone is insufficient.
+Core AI/report functionality uses 0005 without that dependency. Migration tests run only in the
+dedicated test database and do not downgrade development data.
+
+All 17 warnings are upstream LangSmith asyncio.iscoroutinefunction deprecations on Python 3.14.
+The new dependencies also installed httpx2 transitively; the previous Starlette/httpx warning
+did not occur in this run. Locked dependency versions were refreshed. Python 3.12 specifically,
+live Gemini, real pgvector SQL, Docker runtime and external deployment remain unverified.
+No frontend changes were made and its tests/build were not rerun during Phase 5.
+
+Quota safeguards: an autouse socket guard blocks non-loopback connections during pytest,
+the real provider refuses execution under pytest/test settings, all AI responses are fakes,
+and tracing is disabled. See [AI setup and separate approval procedure](05_AI_Integration.md).
+
 The root README contains complete PowerShell startup commands for Docker/PostgreSQL, Python,
 Alembic, seed and Vite. This document records verification and operational details.
 

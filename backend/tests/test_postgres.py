@@ -87,7 +87,10 @@ def test_real_database_health(session):
 
 def test_postgresql_schema(pg_engine):
     inspector = inspect(pg_engine)
-    assert set(inspector.get_table_names()) == set(Base.metadata.tables) | {"alembic_version"}
+    expected = set(Base.metadata.tables)
+    if pg_engine._phase5_target == "0005":
+        expected.remove("grievance_embeddings")
+    assert set(inspector.get_table_names()) == expected | {"alembic_version"}
     enums = {item["name"]: item["labels"] for item in inspector.get_enums()}
     assert enums == {
         "user_role": ["CITIZEN", "CMO_ADMIN", "DEPARTMENT_OFFICER"],
@@ -97,6 +100,8 @@ def test_postgresql_schema(pg_engine):
         "review_status": ["PENDING", "ACCEPTED", "RETURNED"],
     }
     for name, table in Base.metadata.tables.items():
+        if name not in expected:
+            continue
         assert len(inspector.get_foreign_keys(name)) == len(table.foreign_key_constraints)
     indexes = inspector.get_indexes("department_assignments")
     active = next(

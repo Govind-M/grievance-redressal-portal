@@ -30,8 +30,17 @@ no-store. Validation responses omit raw inputs so passwords cannot be reflected 
 
 CMO/officer assignment, investigation, report review, escalation and analytics endpoints are now
 implemented. See [Phase 4 contracts and complete request examples](10_Administrative_Workflow.md).
-Feedback, contact, upload and AI endpoints remain deferred. Explicit role-specific DTOs omit hashes,
+Feedback, contact and upload endpoints remain deferred. Explicit role-specific DTOs omit hashes,
 tokens and object storage keys. CMO/officer responses also use Cache-Control: no-store.
+
+## Advisory AI — Phase 5
+
+POST /ai/analyze-grievance is citizen-only; POST /cmo/grievances/{id}/ai-analyze,
+POST /cmo/grievances/{id}/detect-duplicates and POST /cmo/reports/{id}/ai-analyze are CMO-only.
+All use existing active-session JWT validation and return is_advisory=true with no-store headers.
+They never change official decisions. Live execution defaults off. See [AI contracts and
+errors](05_AI_Integration.md). Duplicate retrieval requires pgvector/migration 0006;
+classification/report analysis work at core migration 0005.
 
 ## Authentication and profiles — implemented
 

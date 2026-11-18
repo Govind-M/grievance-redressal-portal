@@ -79,20 +79,59 @@ Phase 1 planned eleven primary business tables: `users`, `departments`, `grievan
 
 Grievances validate the 14 Kerala districts and 12 controlled categories stored in existing `grievances/choices.py` or equivalent. Reuse those canonical choices in future AI prompts and user input validation.
 
-Existing Phase 3 APIs reported as implemented:
+**Verified implemented API endpoints (Phases 1–4):**
 
-- `POST /api/v1/grievances`
-- `GET /api/v1/grievances/me`
-- `GET /api/v1/grievances/me/statistics`
-- `GET /api/v1/grievances/{id}`
-- `GET /api/v1/grievances/{id}/history`
-- `GET /api/v1/grievances/track/{reference}`
-- `GET /api/v1/departments`
-- `GET /api/v1/departments/{id}`
+**Auth — `/api/v1/auth`**
+- `POST /register` — citizen self-registration
+- `POST /login` — returns access token + sets refresh cookie
+- `POST /refresh` — rotates refresh token
+- `POST /logout` — revokes session
+- `GET /me` — current user profile
+
+**Users — `/api/v1/users`**
+- `GET /me` — alias for current user
+
+**Departments — `/api/v1/departments`** (public)
+- `GET /` — list all departments
+- `GET /{id}` — department detail
+
+**Grievances — `/api/v1/grievances`** (citizen, owns records)
+- `POST /` — submit a new grievance
+- `GET /me` — citizen's own grievance list
+- `GET /me/statistics` — citizen's own stats
+- `GET /track/{reference}` — public tracking by reference number
+- `GET /{id}` — citizen grievance detail (own only)
+- `GET /{id}/history` — public history (internal remarks redacted)
+
+**CMO — `/api/v1/cmo`** (CMO_ADMIN only)
+- `GET /dashboard/stats` — statewide counts
+- `GET /statistics/districts` — per-district breakdown
+- `GET /statistics/departments` — per-department breakdown
+- `GET /grievances` — paginated full list with filters
+- `GET /grievances/{id}` — full administrative detail
+- `PATCH /grievances/{id}/review` — SUBMITTED → UNDER_REVIEW
+- `POST /grievances/{id}/assign` — first assignment → IN_PROGRESS
+- `POST /grievances/{id}/reassign` — change active assignment
+- `POST /grievances/{id}/remarks` — add administrative update
+- `PATCH /grievances/{id}/priority` — change priority
+- `POST /grievances/{id}/escalate` — record escalation
+- `POST /grievances/{id}/reopen` — RESOLVED → REOPENED
+- `POST /grievances/{id}/resume` — REOPENED → IN_PROGRESS
+- `GET /reports` — paginated action-taken report list
+- `POST /reports/{id}/review` — accept or return a pending report
+
+**Officer — `/api/v1/officer`** (DEPARTMENT_OFFICER only, department-scoped)
+- `GET /dashboard/stats` — department workload stats
+- `GET /grievances` — department grievance list with filters
+- `GET /grievances/assigned-to-me` — shortcut for own assignments
+- `GET /grievances/{id}` — officer grievance detail
+- `POST /grievances/{id}/updates` — post investigation update
+- `POST /grievances/{id}/reports` — submit action-taken report
+- `GET /grievances/{id}/reports` — list department reports for grievance
 
 Citizen records are ownership-filtered **in SQL**. Unauthenticated callers get `401`, wrong roles `403`, and unauthorized resource visibility generally `404`. CMO reads through generic Phase 3 endpoints are intentionally citizen-safe. Use distinct admin/officer detail schemas where necessary. Do not alter route conventions without checking existing integrations.
 
-Phase 4's specification includes CMO dashboard/grievance CRUD-like workflow APIs, hybrid assignments/reassignments, CMO remarks, priority/escalation, officer department list/stats/details/updates/reports, CMO report review, reopen/resume, district- and department-wise statistics. **Discover exact existing endpoint names from routers/OpenAPI; do not assume all proposed endpoints were implemented.** Counts must be based on PostgreSQL records and correctly scoped; avoid counting historical reassignments twice.
+Counts must be based on PostgreSQL records and correctly scoped; avoid counting historical reassignments twice. See `DOCUMENTATION/10_Administrative_Workflow.md` for full endpoint documentation including request/response schemas, workflow rules, and authorization details.
 
 ## 7. AI design decisions (future phase)
 
@@ -121,18 +160,26 @@ Use separate task-specific LangChain prompt + structured-response pipelines; mai
 - Database-side pagination, filters, sorting and aggregates; avoid N+1 queries.
 - Maintain Argon2id password security, token type validation, refresh-token rotation/replay defense and session revocation. Never log tokens or passwords.
 - Prefer pytest + PostgreSQL-backed integration tests for constraints, transaction behavior and concurrency; continue existing fixtures. Run Ruff, Python compilation, Alembic upgrade/check and tests as available. Identify unavailable infrastructure rather than assuming success.
-- Document implemented vs planned features accurately. Preserve the mandatory `DOCUMENTATION/01_Project_Overview.md` through `07_User_Guide.md`, root README, `.env.example`, architecture and ER diagrams, and demo-account guidance. Existing additional docs are useful; do not remove them.
+- Document implemented vs planned features accurately. Preserve the mandatory `DOCUMENTATION/01_Project_Overview.md` through `07_User_Guide.md`, `DOCUMENTATION/10_Administrative_Workflow.md` (Phase 4 administrative workflow reference), root README, `.env.example`, architecture and ER diagrams, and demo-account guidance. Existing additional docs are useful; do not remove them.
 - Protect the prototype disclaimer, fictional test data, and third-party tool/service disclosures.
 
-## 9. Current project handoff status — must be verified
+## 9. Current project handoff status — verified
 
-**Reported implementation state:**
-- Phase 1: FastAPI/PostgreSQL/Alembic foundation and minimal React scaffold.
-- Phase 2: JWT access/refresh authentication, session revocation/blacklisting and RBAC.
-- Phase 3: Citizen grievance CRUD-like submission/list/detail/tracking/history/stats and public department APIs; report stated **235 PostgreSQL-backed tests passed** before Phase 4.
-- Phase 4: Codex implemented CMO/officer workflow and dashboard APIs. Reported **38 Phase 4 PostgreSQL-backed API tests passed**, including two-cycle lifecycle, hybrid permissions, privacy, reassignment, escalation, analytics. Independent-connection concurrency checks for assignment, report creation, and review reportedly passed (one success, one conflict). Then a full regression run found a fixed table-count assumption and fixture import issue; Codex reportedly fixed both and started rerunning, but final outcome was **not provided** because Codex usage limit was reached.
+**Verified implementation state (confirmed by independent agent audit, 2026-11-18):**
 
-**Therefore Phase 4 is NOT yet independently confirmed complete.** The first task for the next agent is to inspect current code, reproduce test results, check route registration, inspect migration head/schema and completion of required docs, and fix only verified gaps. Do not launch Phase 5 until the user approves or Phase 4 verification is satisfactorily complete.
+- Phase 1: FastAPI/PostgreSQL/Alembic foundation and minimal React scaffold. ✅ Complete.
+- Phase 2: JWT access/refresh authentication, session revocation/blacklisting and RBAC. ✅ Complete.
+- Phase 3: Citizen grievance submission/list/detail/tracking/history/stats and public department APIs. ✅ Complete.
+- Phase 4: CMO and department officer workflow APIs, hybrid assignment, escalation, analytics, action-taken report lifecycle, reopening, concurrency controls. ✅ **Independently verified complete.**
+  - Full test suite: **279 passed, 0 failed, 0 skipped** (pytest + PostgreSQL, 140s).
+  - Ruff: clean. Python compilation: clean. Alembic: at revision `0004 (head)`.
+  - `DOCUMENTATION/10_Administrative_Workflow.md` created and complete.
+- Phase 5 (Gemini + LangChain AI integration): **Not started. Authorized to begin.**
+- Frontend UI/UX design: Deferred. React scaffold in place.
+
+**Schema:** 14 tables, 5 PostgreSQL native ENUMs, 4 Alembic migrations (`0001`–`0004`). `ai_analyses` table, `AIAnalysis` ORM model, `gemini_api_key` config setting, and `app/integrations/` directory are in place for Phase 5. No LangChain code written yet.
+
+**Deferred modules (models + tables exist, no routers):** `citizen_feedback`, `contact_enquiries`, `attachments` (upload/download). Do not implement these until explicitly requested.
 
 ## 10. Agent handoff and completion reporting
 
@@ -148,4 +195,41 @@ Never report work as complete solely from a prior agent's progress messages. Pre
 
 ## 11. Immediate instruction for a new agent
 
-**First session: read-only repository audit and Phase 4 completion assessment.** Do not edit, migrate, reset Git, change credentials, or install dependencies until the developer authorizes changes. Review `git status` and existing implementation; report specific next verification steps. After authorization, complete remaining Phase 4 verification and only then proceed to Phase 5 AI integrations.
+**Phase 4 is complete and verified. The next task is Phase 5 AI integration.**
+
+Before starting Phase 5:
+1. Run `git status` and inspect recent commits.
+2. Run the full test suite to confirm baseline health: `pytest -v --tb=short` (expect 279 passed).
+3. Read `DOCUMENTATION/10_Administrative_Workflow.md` for the Phase 4 endpoint and business-rule reference.
+4. Read §7 (AI design decisions) in this file for the Phase 5 requirements.
+5. The `app/integrations/` directory, `ai_analyses` table/model, and `gemini_api_key` setting are already in place. Do not scaffold from scratch.
+6. Implement AI features as advisory-only; the CMO retains all official decisions. See §7 for P0/P1/P2 priorities.
+7. Do not implement frontend UI, deferred modules (feedback/contact/attachments), or microservices.
+
+## 12. Phase 5 implementation and quota handoff (supersedes earlier Phase 5 status)
+
+The user authorized Phase 5 backend implementation. Four advisory AI endpoints now exist:
+citizen /ai/analyze-grievance and CMO grievance ai-analyze/detect-duplicates/report ai-analyze.
+LangChain core prompts/runnables, langchain-google-genai structured chat, Google GenAI embeddings,
+strict Pydantic validation, advisory persistence and optional pgvector retrieval are implemented.
+Official workflow mutators remain independent. Do not infer live verification from mocked tests.
+
+Quota policy: AI_ENABLED and AI_LIVE_REQUESTS_ENABLED default false. A real key in .env is NOT
+approval. Never call real Gemini during pytest; provider guards and outbound socket blocking
+enforce that. All chat/embedding tests use mocks. Live requests made in this implementation: 0.
+Obtain explicit user approval before executing any real provider request. Initial approval may
+cover only ONE classification and ONE embedding, with zero automatic retries. Only the separate
+scripts.ai_live_smoke --approved-live-requests command performs that opt-in verification.
+Never automatically execute historical embedding indexing/backfills.
+
+0005 adds AI report provenance and does not require pgvector. Optional 0006 adds Vector(768)
+storage. This Windows PostgreSQL 18 server does not advertise vector, so real vector SQL remains
+blocked; never substitute arrays/JSON and call it pgvector. Do not install server components or
+claim live success without evidence. See DOCUMENTATION/05_AI_Integration.md and
+DOCUMENTATION/Development_Handoff.md for current verification, settings and precise limitations.
+
+Final mocked Phase 5 verification: 357 passed, 3 real-vector tests skipped (server extension
+unavailable), 17 upstream LangSmith/Python 3.14 deprecation warnings. Ruff/compileall/pip check
+passed. Core 0005 upgrade/downgrade/metadata comparison passed in an isolated test DB; missing
+vector migration failure was verified safe. Repository head 0006; development stayed at 0004.
+Live provider verification remains pending, with exactly 0 live Gemini requests made.

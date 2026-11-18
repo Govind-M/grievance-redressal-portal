@@ -1,6 +1,7 @@
 """Import every mapped class for Alembic and application metadata discovery."""
 
 from app.modules.action_reports.models import ActionTakenReport
+from app.modules.ai.embedding_models import GrievanceEmbedding
 from app.modules.ai.models import AIAnalysis
 from app.modules.assignments.models import DepartmentAssignment
 from app.modules.attachments.models import Attachment
@@ -15,6 +16,7 @@ from app.modules.grievances.models import Grievance
 from app.modules.users.models import User
 
 __all__ = [
+    "GrievanceEmbedding",
     "GrievanceEscalation",
     "ActionTakenReport",
     "AIAnalysis",
